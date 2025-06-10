@@ -1,9 +1,21 @@
 import csv
+import torch
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+# 自动选择设备和精度
+if torch.cuda.is_available():
+    device = "cuda"
+    dtype = torch.float16
+elif torch.backends.mps.is_available():
+    device = "mps"
+    dtype = torch.float16
+else:
+    device = "cpu"
+    dtype = torch.float32
+
 # 加载 BERT 模型，用于计算句子嵌入
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
 
 
 # 读取数据库的真实类别（真实标签）CSV文件
