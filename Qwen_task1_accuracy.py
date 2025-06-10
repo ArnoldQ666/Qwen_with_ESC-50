@@ -41,26 +41,35 @@ def calculate_similarity(description, category):
     return similarity
 
 
-# 计算准确度并输出逐项对比结果
+# 计算准确度并输出逐项对比结果（对所有类别做相似度计算，选最大者为预测类别）
 def compare_results(ground_truth, processed_results, similarity_threshold=0.4):
     comparison_results = []
     correct_count = 0
     total_count = 0
 
+    # 获取所有类别集合
+    all_categories = set(ground_truth.values())
+
     for filename, description in processed_results.items():
         if filename in ground_truth:
-            category = ground_truth[filename]
+            true_category = ground_truth[filename]
 
-            # 计算相似度
-            similarity = calculate_similarity(description, category)
+            # 对所有类别计算相似度，选最大
+            similarities = {}
+            for category in all_categories:
+                similarity = calculate_similarity(description, category)
+                similarities[category] = similarity
+            # 选最大相似度的类别
+            predicted_category = max(similarities, key=similarities.get)
+            max_similarity = similarities[predicted_category]
 
-            # 判断是否匹配
-            is_correct = similarity >= similarity_threshold
+            is_correct = (predicted_category == true_category)
             comparison_results.append({
                 'Filename': filename,
                 'Generated Description': description,
-                'True Category': category,
-                'Similarity': similarity,
+                'True Category': true_category,
+                'Predicted Category': predicted_category,
+                'Max Similarity': max_similarity,
                 'Match': 'Yes' if is_correct else 'No'
             })
 
@@ -74,8 +83,8 @@ def compare_results(ground_truth, processed_results, similarity_threshold=0.4):
 
 if __name__ == "__main__":
     # 设置路径
-    ground_truth_file = '/content/drive/MyDrive/ESC-50-master/meta/esc50.csv'  # 修改为你的数据库文件路径
-    processed_file = '/content/drive/MyDrive/audio_results.csv'  # 修改为处理后结果的CSV文件路径
+    ground_truth_file = './ESC-50-master/meta/esc50.csv'  # 修改为你的数据库文件路径
+    processed_file = './audio_results.csv'  # 修改为处理后结果的CSV文件路径
 
     # 读取数据
     ground_truth = read_ground_truth(ground_truth_file)
@@ -90,7 +99,8 @@ if __name__ == "__main__":
         print(f"Filename: {result['Filename']}")
         print(f"Generated Description: {result['Generated Description']}")
         print(f"True Category: {result['True Category']}")
-        print(f"Similarity: {result['Similarity']:.4f}")
+        print(f"Predicted Category: {result['Predicted Category']}")
+        print(f"Max Similarity: {result['Max Similarity']:.4f}")
         print(f"Match: {result['Match']}")
         print("-" * 50)
 

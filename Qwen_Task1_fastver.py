@@ -27,8 +27,8 @@ class AudioCSVGenerator:
         """
         try:
             # 硬件配置
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.dtype = torch.float16 if self.device == "cuda" else torch.float32
+            self.device = "mps" 
+            self.dtype = torch.float16 if self.device == "mps" else torch.float32
 
             # 加载模型
             self.model = Qwen2AudioForConditionalGeneration.from_pretrained(
@@ -147,7 +147,7 @@ class AudioCSVGenerator:
 if __name__ == "__main__":
     # 使用示例
     processor = AudioCSVGenerator(
-        output_csv="/content/drive/MyDrive/audio_results.csv",
+        output_csv="./audio_results.csv",
         batch_size=4,  # RTX 3090推荐值
         max_audio_length=30  # 截断长音频
     )

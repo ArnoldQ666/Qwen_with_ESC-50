@@ -1,0 +1,3 @@
+[submodule "ESC-50-master"]
+	path = ESC-50-master
+	url = https://github.com/karolpiczak/ESC-50.git
