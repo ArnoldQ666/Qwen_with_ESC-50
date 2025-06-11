@@ -9,11 +9,11 @@ from sklearn.metrics import accuracy_score, classification_report
 from tqdm import tqdm  # 引入进度条库
 
 # 读取 CSV
-csv_path = "/content/drive/MyDrive/ESC-50-master (1)/meta/esc50.csv"
+csv_path = "./ESC-50-master/meta/esc50.csv"
 df = pd.read_csv(csv_path,index_col=3)
 
 # 读取 npy 文件
-data_dir = "/content/drive/MyDrive/new_Feature_random"
+data_dir = "./new_Feature"
 X, y = [], []
 
 # 读取数据并加入进度条
@@ -73,7 +73,7 @@ report = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report).transpose()
 
 # 将分类报告保存为 CSV
-report_csv_path = "classification_report.csv"
+report_csv_path = "classification_PCA_report.csv"
 report_df.to_csv(report_csv_path, index=True)
 
 print(f"分类报告已保存为 CSV 文件：{report_csv_path}")

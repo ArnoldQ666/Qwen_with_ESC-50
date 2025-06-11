@@ -2,8 +2,6 @@ import csv
 import torch
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 
 # 自动选择设备和精度
 if torch.cuda.is_available():
@@ -17,7 +15,7 @@ else:
     dtype = torch.float32
 
 # 加载 BERT 模型，用于计算句子嵌入
-model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+model = SentenceTransformer('all-MiniLM-L6-v2', device="cpu")
 
 
 # 读取数据库的真实类别（真实标签）CSV文件
@@ -55,52 +53,38 @@ def calculate_similarity(description, category):
     return similarity
 
 
-def calculate_similarity_with_model(description, category, model):
-    embeddings = model.encode([description, category])
-    similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
-    return similarity
-
-
-# 多线程，每个线程有自己的模型
-def compare_results(ground_truth, processed_results, similarity_threshold=0.4, num_workers=2):
+def compare_results(ground_truth, processed_results, similarity_threshold=0.4):
     all_categories = set(ground_truth.values())
     items = [(filename, description) for filename, description in processed_results.items() if filename in ground_truth]
+    
+    # 使用单一模型实例进行计算
+    correct_count = 0
+    detailed = []
+    
+    print(f"开始处理 {len(items)} 个样本...")
+    for i, (filename, description) in enumerate(items):
+        if i % 100 == 0:  # 每100个样本显示进度
+            print(f"已处理: {i}/{len(items)}")
+            
+        true_category = ground_truth[filename]
+        similarities = {category: calculate_similarity(description, category) for category in all_categories}
+        predicted_category = max(similarities, key=similarities.get)
+        max_similarity = similarities[predicted_category]
+        is_correct = (predicted_category == true_category)
+        
+        detailed.append({
+            'Filename': filename,
+            'Generated Description': description,
+            'True Category': true_category,
+            'Predicted Category': predicted_category,
+            'Max Similarity': max_similarity,
+            'Match': 'Yes' if is_correct else 'No'
+        })
+        
+        if is_correct:
+            correct_count += 1
 
-    def worker(sub_items):
-        # 每个线程独立加载模型
-        local_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
-        correct = 0
-        detailed = []
-        for filename, description in sub_items:
-            true_category = ground_truth[filename]
-            similarities = {category: calculate_similarity_with_model(description, category, local_model) for category in all_categories}
-            predicted_category = max(similarities, key=similarities.get)
-            max_similarity = similarities[predicted_category]
-            is_correct = (predicted_category == true_category)
-            detailed.append({
-                'Filename': filename,
-                'Generated Description': description,
-                'True Category': true_category,
-                'Predicted Category': predicted_category,
-                'Max Similarity': max_similarity,
-                'Match': 'Yes' if is_correct else 'No'
-            })
-            if is_correct:
-                correct += 1
-        return correct, len(sub_items), detailed
-
-    # 均分任务
-    chunk_size = (len(items) + num_workers - 1) // num_workers
-    chunks = [items[i*chunk_size:(i+1)*chunk_size] for i in range(num_workers)]
-
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        results = list(executor.map(worker, chunks))
-
-    correct_count = sum(r[0] for r in results)
-    total_count = sum(r[1] for r in results)
-    all_details = []
-    for r in results:
-        all_details.extend(r[2])
+    total_count = len(items)
     accuracy = correct_count / total_count if total_count > 0 else 0
 
     # 保存详细结果到CSV
@@ -110,7 +94,7 @@ def compare_results(ground_truth, processed_results, similarity_threshold=0.4, n
             'Filename', 'Generated Description', 'True Category', 'Predicted Category', 'Max Similarity', 'Match'
         ])
         writer.writeheader()
-        for row in all_details:
+        for row in detailed:
             writer.writerow(row)
     print(f"详细对比结果已保存到: {report_file}")
 
@@ -121,7 +105,6 @@ if __name__ == "__main__":
     # 设置路径
     ground_truth_file = './ESC-50-master/meta/esc50.csv'  # 修改为你的数据库文件路径
     processed_file = './audio_results.csv'  # 修改为处理后结果的CSV文件路径
-    num_workers = 2  # 每个线程一个模型
 
     # 读取数据
     ground_truth = read_ground_truth(ground_truth_file)
@@ -132,7 +115,7 @@ if __name__ == "__main__":
     processed_results = read_processed_results(processed_file)
 
     # 计算准确度
-    accuracy, correct_count, total_count = compare_results(ground_truth, processed_results, num_workers=num_workers)
+    accuracy, correct_count, total_count = compare_results(ground_truth, processed_results)
 
     # 输出总结
     print(f"总共有 {total_count} 个样本，正确分类的样本数量为 {correct_count}。")
