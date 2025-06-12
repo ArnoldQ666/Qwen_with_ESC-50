@@ -26,9 +26,16 @@ class AudioCSVGenerator:
             max_audio_length: 最大音频长度（秒）
         """
         try:
-            # 硬件配置
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.dtype = torch.float16 if self.device == "cuda" else torch.float32
+            # 自动选择设备和精度
+            if torch.cuda.is_available():
+                self.device = "cuda"
+                self.dtype = torch.float16
+            elif torch.backends.mps.is_available():
+                self.device = "mps"
+                self.dtype = torch.float16
+            else:
+                self.device = "cpu"
+                self.dtype = torch.float32
 
             # 加载模型
             self.model = Qwen2AudioForConditionalGeneration.from_pretrained(
@@ -83,7 +90,7 @@ class AudioCSVGenerator:
             # 3. 处理输入
             inputs = self.processor(
                 text=[self.processor.apply_chat_template(c, tokenize=False) for c in conversations],
-                audios=audios,
+                audio=audios,
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
@@ -147,9 +154,9 @@ class AudioCSVGenerator:
 if __name__ == "__main__":
     # 使用示例
     processor = AudioCSVGenerator(
-        output_csv="/content/drive/MyDrive/audio_results.csv",
-        batch_size=4,  # RTX 3090推荐值
+        output_csv="./audio_results.csv",
+        batch_size=10,  # RTX 3090推荐值
         max_audio_length=30  # 截断长音频
     )
 
-    processor.process_folder("/content/drive/MyDrive/ESC-50-master/audio")
+    processor.process_folder("./ESC-50-master/audio")

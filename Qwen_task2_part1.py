@@ -9,7 +9,7 @@ processor = AutoProcessor.from_pretrained("Qwen/Qwen2-Audio-7B-Instruct")
 model = Qwen2AudioForConditionalGeneration.from_pretrained("Qwen/Qwen2-Audio-7B-Instruct", device_map="auto")
 
 # 2. 设定音频文件路径
-audio_folder = Path("/content/drive/MyDrive/ESC-50-master/audio")
+audio_folder = Path("./ESC-50-master/audio")
 audio_files = list(audio_folder.glob("*.wav"))
 
 if not audio_files:
@@ -17,7 +17,7 @@ if not audio_files:
     exit()
 
 # 3. 设定特征存储路径
-output_folder = Path("/content/drive/MyDrive/new_Feature")
+output_folder = Path("./new_Feature")
 output_folder.mkdir(parents=True, exist_ok=True)
 
 # 4. 生成对话内容（注意这里构造了包含所有音频的文本）
